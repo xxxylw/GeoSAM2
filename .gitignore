@@ -1,0 +1,49 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C / CUDA build artifacts
+*.so
+*.o
+*.obj
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Local virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Editor / IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Project artifacts
+ckpt/
+checkpoints/
+outputs/
+exp/
+logs/
+wandb/
+*.log
+
+# Hydra
+.hydra/
+multirun/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Test / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/

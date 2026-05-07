@@ -1,0 +1,58 @@
+[build-system]
+requires = ["setuptools>=68", "wheel", "torch>=2.3"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "geosam2"
+version = "0.1.0"
+description = "Unleashing the Power of SAM2 for 3D Part Segmentation"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [
+    { name = "VAST-AI-Research and the GeoSAM2 authors" },
+]
+keywords = ["3d", "segmentation", "sam2", "computer-vision", "point-cloud"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "numpy",
+    "torch>=2.3",
+    "torchvision",
+    "hydra-core>=1.3",
+    "omegaconf>=2.3",
+    "iopath",
+    "pillow",
+    "opencv-python",
+    "matplotlib",
+    "tqdm",
+    "trimesh",
+    "pandas",
+    "ninja",
+]
+
+[project.urls]
+Homepage = "https://detailgen3d.github.io/GeoSAM2/"
+Repository = "https://github.com/VAST-AI-Research/GeoSAM2"
+Paper = "https://arxiv.org/abs/2508.14036"
+Model = "https://huggingface.co/VAST-AI/GeoSAM2"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["sam2*", "utils*"]
+exclude = ["assets*", "example*", "scripts*", "outputs*", "ckpt*"]
+
+[tool.setuptools.package-data]
+sam2 = ["configs/*.yaml", "configs/**/*.yaml", "csrc/*.cu", "csrc/*.h", "csrc/*.cpp"]
+utils = ["*.cpp"]
