@@ -74,6 +74,20 @@ python inference.py \
   --output-dir outputs/sample_00/3d_seg
 ```
 
+## Agent skills
+
+### Issue tracker
+
+Issues and PRDs are tracked as GitHub issues by default. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Use the default triage labels, including `ready-for-agent` for fully specified work. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+This is a single-context repo with root `CONTEXT.md` and ADRs under `docs/adr/`. See `docs/agents/domain.md`.
+
 There is no formal test suite. Before submitting any non-trivial change, at
 minimum run `python -m py_compile` on the files you touched and execute the
 demo script above on a CUDA box.
