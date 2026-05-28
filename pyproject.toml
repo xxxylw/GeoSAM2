@@ -50,7 +50,7 @@ Model = "https://huggingface.co/VAST-AI/GeoSAM2"
 include-package-data = true
 
 [tool.setuptools.packages.find]
-include = ["sam2*", "utils*"]
+include = ["geosam2*", "sam2*", "utils*"]
 exclude = ["assets*", "example*", "scripts*", "outputs*", "ckpt*"]
 
 [tool.setuptools.package-data]
