@@ -68,6 +68,46 @@ class ReliableCoarseFilteringBehaviorTests(unittest.TestCase):
             self.assertEqual(len(manifest["parts"]), 1)
             self.assertEqual(manifest["parts"][0]["status"], "unsegmented")
 
+    def test_moderate_unlabeled_area_is_filled_into_dominant_part(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            input_path = root / "asset.glb"
+            output_dir = root / "out"
+            face_count = make_many_face_glb(input_path)
+            labels = [0] * 180 + [10] * 90 + [20] * (face_count - 270)
+
+            result = segment_glb(
+                input_path=input_path,
+                output_dir=output_dir,
+                label_runner=SequenceRunner(labels),
+            )
+
+            self.assertEqual(result.status, "segmented")
+            saved_labels = np.load(output_dir / "labels" / "face_labels.npy")
+            self.assertEqual(sorted(np.unique(saved_labels).tolist()), [1, 2])
+            self.assertEqual(len(saved_labels), face_count)
+
+            manifest = json.loads((output_dir / "labels" / "part_manifest.json").read_text())
+            self.assertEqual(manifest["filtering"]["reason"], "filled_unreliable_labels")
+
+    def test_one_percent_scale_parts_are_kept_for_large_meshes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            input_path = root / "asset.glb"
+            output_dir = root / "out"
+            face_count = make_many_face_glb(input_path)
+            labels = [1] * (face_count - 8) + [2] * 4 + [3] * 4
+
+            result = segment_glb(
+                input_path=input_path,
+                output_dir=output_dir,
+                label_runner=SequenceRunner(labels),
+            )
+
+            self.assertEqual(result.status, "segmented")
+            saved_labels = np.load(output_dir / "labels" / "face_labels.npy")
+            self.assertEqual(sorted(np.unique(saved_labels).tolist()), [1, 2, 3])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 import json
+import os
 import shutil
 from pathlib import Path
 from typing import Any, Literal, Protocol
@@ -113,24 +114,29 @@ def segment_glb(
     else:
         selected_gpu = int(gpu)
 
+    request = LabelRequest(
+        input_path=str(input_path),
+        mode=mode,
+        render_cache_dir=str(render_cache_dir),
+        gpu=selected_gpu,
+        mask_path=str(mask_path) if mask_path is not None else None,
+        mask_view=mask_view,
+        points_path=str(points_path) if points_path is not None else None,
+        prompt_view=prompt_view,
+    )
     if label_runner is None:
-        face_labels = np.ones((face_count,), dtype=np.int32)
-    else:
-        request = LabelRequest(
-            input_path=str(input_path),
-            mode=mode,
-            render_cache_dir=str(render_cache_dir),
-            gpu=selected_gpu,
-            mask_path=str(mask_path) if mask_path is not None else None,
-            mask_view=mask_view,
-            points_path=str(points_path) if points_path is not None else None,
-            prompt_view=prompt_view,
-        )
+        label_runner = create_default_label_runner()
+
+    try:
         face_labels = np.asarray(label_runner.infer_face_labels(request), dtype=np.int32).reshape(-1)
-        if len(face_labels) != face_count:
-            raise SegmentError(
-                f"Face label count mismatch: expected {face_count}, got {len(face_labels)}"
-            )
+    except Exception as exc:
+        if isinstance(exc, SegmentError):
+            raise
+        raise SegmentError(str(exc)) from exc
+    if len(face_labels) != face_count:
+        raise SegmentError(
+            f"Face label count mismatch: expected {face_count}, got {len(face_labels)}"
+        )
 
     face_labels, status, filter_summary = _apply_reliable_coarse_filter(face_labels)
     face_labels_path = labels_dir / "face_labels.npy"
@@ -206,6 +212,19 @@ def segment_glb(
     )
 
 
+def create_default_label_runner() -> FaceLabelRunner:
+    """Create the production label runner.
+
+    Tests and explicitly offline smoke runs can set
+    ``GEOSAM2_DEFAULT_RUNNER=unsegmented`` to avoid invoking Blender/GPU.
+    """
+    from .geosam2_runner import GeoSAM2FaceLabelRunner, UnsegmentedFaceLabelRunner
+
+    if os.environ.get("GEOSAM2_DEFAULT_RUNNER") == "unsegmented":
+        return UnsegmentedFaceLabelRunner()
+    return GeoSAM2FaceLabelRunner()
+
+
 def _count_faces(input_path: Path) -> int:
     loaded = trimesh.load(input_path, force="scene", process=False)
     if isinstance(loaded, trimesh.Scene):
@@ -269,9 +288,10 @@ def _build_parts(
 def _apply_reliable_coarse_filter(
     labels: np.ndarray,
     *,
-    min_area_ratio: float = 0.05,
+    min_area_ratio: float = 0.01,
     min_coverage: float = 0.95,
-    max_parts: int = 5,
+    min_fillable_coverage: float = 0.25,
+    max_parts: int = 12,
 ) -> tuple[np.ndarray, str, dict[str, Any]]:
     labels = np.asarray(labels, dtype=np.int32).reshape(-1)
     total = int(len(labels))
@@ -303,6 +323,7 @@ def _apply_reliable_coarse_filter(
         "filtered_labels": [label for label in sorted_labels if label not in reliable],
         "min_area_ratio": min_area_ratio,
         "min_coverage": min_coverage,
+        "min_fillable_coverage": min_fillable_coverage,
         "max_parts": max_parts,
         "reason": None,
     }
@@ -310,12 +331,17 @@ def _apply_reliable_coarse_filter(
     if len(reliable) < 2:
         summary["reason"] = "no_reliable_coarse_parts"
         return np.ones((total,), dtype=np.int32), "unsegmented", summary
-    if coverage < min_coverage:
+    if coverage < min_coverage and coverage < min_fillable_coverage:
         summary["reason"] = "insufficient_label_coverage"
         return np.ones((total,), dtype=np.int32), "unsegmented", summary
 
     filtered = np.zeros((total,), dtype=np.int32)
     for new_label, old_label in enumerate(sorted(reliable), start=1):
         filtered[labels == old_label] = new_label
+    if coverage < min_coverage:
+        dominant_old_label = max(reliable, key=lambda label: counts[label])
+        dominant_new_label = sorted(reliable).index(dominant_old_label) + 1
+        filtered[filtered == 0] = dominant_new_label
+        summary["reason"] = "filled_unreliable_labels"
     summary["reliable_labels"] = sorted(reliable)
     return filtered, "segmented", summary

@@ -8,6 +8,16 @@ import trimesh
 from geosam2.pipeline import segment_glb
 
 
+class UnsegmentedRunner:
+    def infer_face_labels(self, request):
+        loaded = trimesh.load(request.input_path, force="scene", process=False)
+        if isinstance(loaded, trimesh.Scene):
+            face_count = sum(len(geometry.faces) for geometry in loaded.geometry.values())
+        else:
+            face_count = len(loaded.faces)
+        return [1] * face_count
+
+
 def make_box_glb(path: Path, scale: float = 1.0) -> None:
     mesh = trimesh.creation.box(extents=(scale, 1.0, 1.0))
     mesh.export(path)
@@ -23,8 +33,9 @@ class RenderCacheAndGpuBehaviorTests(unittest.TestCase):
 
             first = root / "first"
             second = root / "second"
-            segment_glb(input_path=input_path, output_dir=first, cache_dir=cache_dir)
-            segment_glb(input_path=input_path, output_dir=second, cache_dir=cache_dir)
+            runner = UnsegmentedRunner()
+            segment_glb(input_path=input_path, output_dir=first, cache_dir=cache_dir, label_runner=runner)
+            segment_glb(input_path=input_path, output_dir=second, cache_dir=cache_dir, label_runner=runner)
 
             key1 = (first / "debug" / "render_cache_key.txt").read_text()
             key2 = (second / "debug" / "render_cache_key.txt").read_text()
@@ -42,8 +53,9 @@ class RenderCacheAndGpuBehaviorTests(unittest.TestCase):
 
             first = root / "first"
             second = root / "second"
-            segment_glb(input_path=first_input, output_dir=first, cache_dir=cache_dir)
-            segment_glb(input_path=second_input, output_dir=second, cache_dir=cache_dir)
+            runner = UnsegmentedRunner()
+            segment_glb(input_path=first_input, output_dir=first, cache_dir=cache_dir, label_runner=runner)
+            segment_glb(input_path=second_input, output_dir=second, cache_dir=cache_dir, label_runner=runner)
 
             key1 = (first / "debug" / "render_cache_key.txt").read_text()
             key2 = (second / "debug" / "render_cache_key.txt").read_text()
@@ -56,7 +68,7 @@ class RenderCacheAndGpuBehaviorTests(unittest.TestCase):
             output_dir = root / "out"
             make_box_glb(input_path)
 
-            segment_glb(input_path=input_path, output_dir=output_dir, gpu=2)
+            segment_glb(input_path=input_path, output_dir=output_dir, gpu=2, label_runner=UnsegmentedRunner())
 
             manifest = json.loads((output_dir / "labels" / "part_manifest.json").read_text())
             self.assertEqual(manifest["run"]["gpu"], 2)

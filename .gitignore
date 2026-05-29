@@ -30,6 +30,7 @@ ENV/
 ckpt/
 checkpoints/
 outputs/
+.cache/
 exp/
 logs/
 wandb/

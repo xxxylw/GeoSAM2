@@ -1,4 +1,5 @@
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -58,6 +59,8 @@ class PromptDrivenSegmentationBehaviorTests(unittest.TestCase):
             make_box_glb(input_path)
             points_path.write_text("[]")
 
+            env = os.environ.copy()
+            env["GEOSAM2_DEFAULT_RUNNER"] = "unsegmented"
             completed = subprocess.run(
                 [
                     sys.executable,
@@ -77,6 +80,7 @@ class PromptDrivenSegmentationBehaviorTests(unittest.TestCase):
                 text=True,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
+                env=env,
             )
 
             self.assertEqual(completed.returncode, 0, completed.stderr)

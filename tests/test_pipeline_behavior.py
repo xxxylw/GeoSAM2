@@ -1,9 +1,11 @@
 import json
+import os
 import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import trimesh
 
@@ -23,7 +25,8 @@ class SegmentGlbBehaviorTests(unittest.TestCase):
             output_dir = root / "out"
             make_box_glb(input_path)
 
-            result = segment_glb(input_path=input_path, output_dir=output_dir)
+            with patch.dict("os.environ", {"GEOSAM2_DEFAULT_RUNNER": "unsegmented"}):
+                result = segment_glb(input_path=input_path, output_dir=output_dir)
 
             self.assertEqual(result.status, "unsegmented")
             self.assertEqual(result.mode, "automatic")
@@ -54,6 +57,8 @@ class SegmentGlbBehaviorTests(unittest.TestCase):
             output_dir = root / "out"
             make_box_glb(input_path)
 
+            env = os.environ.copy()
+            env["GEOSAM2_DEFAULT_RUNNER"] = "unsegmented"
             completed = subprocess.run(
                 [
                     sys.executable,
@@ -67,6 +72,7 @@ class SegmentGlbBehaviorTests(unittest.TestCase):
                 text=True,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
+                env=env,
             )
 
             self.assertEqual(completed.returncode, 0, completed.stderr)
